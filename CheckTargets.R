@@ -132,7 +132,6 @@ PlotTargets<-function(data,output_prefix){
 
 CheckTargets<-function(blast_file,min_pident,min_fragment_length,max_intron_length,output_prefix){
   dat<-as_tibble(read.table(blast_file,header=T))
-  # print(dat)
   dat<-dat %>%
     filter(pident >= min_pident,
            length >= min_fragment_length)
@@ -203,3 +202,7 @@ CheckTargets(blast_file=args$blast_file,
 
 
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
