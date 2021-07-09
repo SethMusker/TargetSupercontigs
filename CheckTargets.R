@@ -1,6 +1,6 @@
 ### This script will take a tabular blast result (-outfmt 6) with your target exons as the query and (draft) genome as the subject
 ###  and do the following:
-###   1. Find potential paralogs by identifying genes with good matches from more than one contig/chromosome segments in the reference genome
+###   1. Find potential paralogs by identifying genes with good matches from more than one contig/chromosome segments, or multiple positions within them, in the reference genome
 ###   2. Find potentially missing genes by identifying genes with no or few good matches in the reference genome
 ###   3. Find genes spanning huge introns
 ###  then
@@ -174,35 +174,10 @@ args<-parse_args(p)
 suppressMessages(suppressWarnings(require(tidyverse,quietly =TRUE,warn.conflicts=FALSE)))
 suppressMessages(suppressWarnings(require(ggrepel,quietly =TRUE,warn.conflicts=FALSE)))
 
-
+## RUN
 CheckTargets(blast_file=args$blast_file,
              min_pident=args$min_pident,
              min_fragment_length=args$min_fragment_length,
              max_intron_length=args$max_intron_length,
              output_prefix=args$output_prefix)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
+             
