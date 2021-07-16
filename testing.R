@@ -7,9 +7,8 @@ library(ggrepel)
 rhodo_mm<-as_tibble(read.table("test_data/blastn_markerminer_to_Rgrier.txt",header = T))
 rhodo_mm
 
-<<<<<<< Updated upstream
 pdf("ggplot_segments_Rgrier.pdf",width=10)
-for(i in unique(rhodo_mm$qseqid)){
+for(i in unique(rhodo_mm$qseqid)[125]){
   
   temp<-rhodo_mm %>% filter(qseqid==i)
   
@@ -22,6 +21,7 @@ for(i in unique(rhodo_mm$qseqid)){
               intron=(shift_sstart-shift_send),
               qpos=c(NA,qend),shift_qstart=c(qstart,NA),
               orientation=c(orientation,NA),
+              intron_position=c(qend,NA),
               .groups = "keep")%>%
     filter(intron>1000,intron<1e6)%>%
     na.exclude()
@@ -33,11 +33,13 @@ for(i in unique(rhodo_mm$qseqid)){
     xlim(c(0,unique(temp$qlen)))+
     theme_bw()+
     labs(x="Target position",y="Genome position")+
-    ggtitle(unique(temp$qseqid))
+    ggtitle(unique(temp$qseqid))+
+    coord_flip()
   if(nrow(introns)>0){
     p<-p+geom_rect(data=introns,
                    aes(xmin=-Inf,xmax=Inf,ymin=shift_sstart,ymax=shift_send),
                    colour="darkgreen",alpha=0.05,size=NA)+
+      # geom_vline(data=introns,aes(xintercept=intron_position),lty=3)+
       geom_label_repel(data=introns,
                        aes(x=qpos,
                            y=shift_sstart-(intron/2),
@@ -55,31 +57,29 @@ for(i in unique(rhodo_mm$qseqid)){
 }
 dev.off()
 dev.off()
-=======
+
 library(tidyverse)
 library(ggrepel)
->>>>>>> Stashed changes
 
 rhodo_mm<-as_tibble(read.table("test_data/blastn_markerminer_to_Rgrier.txt",header = T))
 rhodo_mm
 
-<<<<<<< Updated upstream
 min_fragment_length=100
 max_intron_length=1000
+max_intron_percent=50
 ### create filtering data.frame
 
 ## NOTE: need to distinguish true introns from distances between paralogs on the same chromosome
 ## Best done by first identifying same-chromosome paralogs, then only doing FindIntrons on the rest
 
 
-FindIntrons<-function(data,min_fragment_length,max_intron_length){
+FindIntrons<-function(data,max_intron_length,max_intron_percent){
   introns_out<-data.frame()
   introns_flag_out<-data.frame()
   for(i in unique(data$qseqid)){
     
     temp<-data %>% 
-      filter(qseqid==i,
-             length >= min_fragment_length)
+      filter(qseqid==i)
     
     introns <-  temp %>% group_by(qseqid,sseqid)%>% 
       mutate(p_sstart=ifelse(sstart<send,sstart,send),
@@ -89,25 +89,45 @@ FindIntrons<-function(data,min_fragment_length,max_intron_length){
       summarise(shift_sstart=c(p_sstart,NA),shift_send=c(NA,p_send),
                 intron_length=(shift_sstart-shift_send),
                 orientation=c(orientation,NA),
+                intron_position_on_target=c(qend,NA),
+                supercontig_length=max(p_send)-min(p_sstart),
                 .groups = "keep")%>%
       na.exclude() %>%
-      select(qseqid,sseqid,intron_length) 
-    
+      select(qseqid,sseqid,intron_length,intron_position_on_target,supercontig_length)
     ## write to data.frame
     introns_out<-rbind(introns_out,introns)
     
     introns_flag<-introns %>%
-      filter(intron_length>=max_intron_length)%>%
-      ungroup()%>%
-      select(qseqid)%>%unique()
+      summarise(longest_intron_length=max(intron_length),
+                total_intron_length=sum(intron_length),
+                largest_intron_percent=max(sum(intron_length)/unique(supercontig_length))*100,
+                exceeds_max_intron_length=ifelse(any(intron_length>=max_intron_length),TRUE,FALSE),
+                exceeds_max_intron_percent=ifelse(largest_intron_percent>=max_intron_percent,TRUE,FALSE),
+                summed_supercontig_length=unique(supercontig_length),
+                .groups="keep") %>%
+      ungroup() %>%
+      select(qseqid,sseqid,summed_supercontig_length,
+             longest_intron_length,total_intron_length,exceeds_max_intron_length,
+             largest_intron_percent,exceeds_max_intron_percent) %>%
+      unique()
+    
     introns_flag_out<-rbind(introns_flag_out,introns_flag)
   }
-  return(list(intron_details=introns_out,targets_with_large_introns=introns_flag_out))
+  return(list(intron_details=introns_out,targets_with_intron_flags=introns_flag_out))
 }
+
+
+
+FindIntrons(rhodo_mm[rhodo_mm$qseqid %in% unique(rhodo_mm$qseqid)[115:129],],max_intron_length,max_intron_percent)
 introns_out
 introns_flag_out
 
-=======
+
+
+
+
+
+
 pdf("ggplot_segments_Rgrier.pdf",width=10)
 for(i in unique(rhodo_mm$qseqid)){
   
@@ -164,44 +184,47 @@ max_intron_length=1000
 ## NOTE: need to distinguish true introns from distances between paralogs on the same chromosome
 ## Best done by first identifying same-chromosome paralogs, then only doing FindIntrons on the rest
 
+# 
+# FindIntrons<-function(data,min_fragment_length,max_intron_length){
+#   introns_out<-data.frame()
+#   introns_flag_out<-data.frame()
+#   for(i in unique(data$qseqid)){
+#     
+#     temp<-data %>% 
+#       filter(qseqid==i,
+#              length >= min_fragment_length)
+#     
+#     introns <-  temp %>% group_by(qseqid,sseqid)%>% 
+#       mutate(p_sstart=ifelse(sstart<send,sstart,send),
+#              p_send=ifelse(p_sstart==sstart,send,sstart),
+#              orientation=ifelse(p_sstart==sstart,"forward","reverse"))%>% 
+#       arrange(p_sstart,.by_group = TRUE) %>%
+#       summarise(shift_sstart=c(p_sstart,NA),shift_send=c(NA,p_send),
+#                 intron_length=(shift_sstart-shift_send),
+#                 orientation=c(orientation,NA),
+#                 .groups = "keep")%>%
+#       na.exclude() %>%
+#       select(qseqid,sseqid,intron_length) 
+#     
+#     ## write to data.frame
+#     introns_out<-rbind(introns_out,introns)
+#     
+#     introns_flag<-introns %>%
+#       filter(intron_length>=max_intron_length)%>%
+#       ungroup()%>%
+#       select(qseqid)%>%unique()
+#     introns_flag_out<-rbind(introns_flag_out,introns_flag)
+#   }
+#   return(list(intron_details=introns_out,targets_with_large_introns=introns_flag_out))
+# }
+# introns_out
+# introns_flag_out
 
-FindIntrons<-function(data,min_fragment_length,max_intron_length){
-  introns_out<-data.frame()
-  introns_flag_out<-data.frame()
-  for(i in unique(data$qseqid)){
-    
-    temp<-data %>% 
-      filter(qseqid==i,
-             length >= min_fragment_length)
-    
-    introns <-  temp %>% group_by(qseqid,sseqid)%>% 
-      mutate(p_sstart=ifelse(sstart<send,sstart,send),
-             p_send=ifelse(p_sstart==sstart,send,sstart),
-             orientation=ifelse(p_sstart==sstart,"forward","reverse"))%>% 
-      arrange(p_sstart,.by_group = TRUE) %>%
-      summarise(shift_sstart=c(p_sstart,NA),shift_send=c(NA,p_send),
-                intron_length=(shift_sstart-shift_send),
-                orientation=c(orientation,NA),
-                .groups = "keep")%>%
-      na.exclude() %>%
-      select(qseqid,sseqid,intron_length) 
-    
-    ## write to data.frame
-    introns_out<-rbind(introns_out,introns)
-    
-    introns_flag<-introns %>%
-      filter(intron_length>=max_intron_length)%>%
-      ungroup()%>%
-      select(qseqid)%>%unique()
-    introns_flag_out<-rbind(introns_flag_out,introns_flag)
-  }
-  return(list(intron_details=introns_out,targets_with_large_introns=introns_flag_out))
-}
-introns_out
-introns_flag_out
 
->>>>>>> Stashed changes
-## find same-chromosome paralogs
+
+
+
+## find same-chromosome paralogs, etc.
 coverage_summary<-data.frame()
 for(i in unique(rhodo_mm$qseqid)[120:129]){
   
@@ -231,8 +254,6 @@ for(i in unique(rhodo_mm$qseqid)[120:129]){
   }
   ## write to data.frame
 }
-<<<<<<< Updated upstream
-=======
 
 
 # #####
@@ -614,7 +635,3 @@ for(t in unique(cinerea_prot_good_summary$sseqid)){
 dev.off()
 dev.off()
 dev.off()
-
-
-
-@ @@
